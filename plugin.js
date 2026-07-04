@@ -557,6 +557,24 @@ ${logText}`;
             ui.pageClass.classList.add("active");
             ui.currentClassTitle.textContent = chunkData.title;
             
+            // 绑定查看原文按钮，使用当前的 chunkIdx
+            if(ui.viewDocBtn) {
+                ui.viewDocBtn.onclick = () => {
+                    if(session.documentChunks && session.documentChunks[chunkIdx]) {
+                        ui.docModalContent.textContent = session.documentChunks[chunkIdx].content;
+                        ui.docModal.style.display = "flex";
+                    } else {
+                        roche.ui.toast("当前章节没有资料原文");
+                    }
+                };
+            }
+            if(ui.closeDocModal) {
+                ui.closeDocModal.onclick = () => {
+                    ui.docModal.style.display = "none";
+                };
+            }
+
+            
             ui.classBox.innerHTML = "";
             session.classMessages = [];
             
@@ -687,13 +705,7 @@ ${logText}`;
           a.download = `笔记_${session.currentClassTitle}.txt`; a.click();
         };
 
-          ui.viewDocBtn.onclick = () => {
-              ui.docModalContent.textContent = session.documentChunks[idx].content;
-              ui.docModal.style.display = "flex";
-          };
-          ui.closeDocModal.onclick = () => {
-              ui.docModal.style.display = "none";
-          };
+          
 
       },
       async unmount(container) {

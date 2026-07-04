@@ -854,6 +854,8 @@ ${logText}`;
           
           ui.docModal.querySelector("h4").textContent = "📝 考点笔记";
           
+          if (ui.btnExportNotes) ui.btnExportNotes.style.display = "block";
+          
           // Check cache first
           if (!session.chapterNotes) session.chapterNotes = {};
           if (session.chapterNotes[session.currentChunkIdx]) {

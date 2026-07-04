@@ -508,17 +508,22 @@ ${logText}`;
                         if (btnMem) {
                             btnMem.onclick = async (e) => {
                                 e.stopPropagation();
-                                                                if (confirm("确定将这门课的讨论提取并写入 Roche 主记忆吗？(写入后不可在插件内撤销)")) {
+                                                                                                if (confirm("确定将这门课的讨论提取并写入 Roche 主记忆吗？(写入后不可在插件内撤销)")) {
                                     roche.ui.toast("正在提取记忆...");
                                     let allLogs = "";
                                     if (record.chapterMessages) {
                                         for (let i = 0; i < (record.chunks?.length || 0); i++) {
                                             const msgs = record.chapterMessages[i];
-                                            if(msgs) {
-                                                allLogs += msgs.filter(m => m.role !== 'system').map(m => `${m.role === 'assistant' ? session.charName : session.userName}: ${m.content}`).join('\n') + '\n';
+                                            if(msgs && msgs.length > 0) {
+                                                allLogs += msgs.filter(m => m.role !== 'system').map(m => `${m.role === 'assistant' ? record.charName : record.userName}: ${m.content}`).join('\n') + '\n';
                                             }
                                         }
                                     }
+                                    // 兼容老版本的格式
+                                    if (!allLogs.trim() && record.classMessages && record.classMessages.length > 0) {
+                                        allLogs += record.classMessages.filter(m => m.role !== 'system').map(m => `${m.role === 'assistant' ? record.charName : record.userName}: ${m.content}`).join('\n');
+                                    }
+                                    
                                     if (!allLogs.trim()) {
                                         roche.ui.toast("没有可提取的聊天记录");
                                         return;
@@ -526,10 +531,10 @@ ${logText}`;
                                     try {
                                         const res = await roche.ai.chat({ messages: [{ role: "system", content: generateMemoryArchivalPrompt(allLogs) }], temperature: 0.3 });
                                         await roche.memory.write({
-                                            conversationId: session.conversationId,
+                                            conversationId: record.conversationId || roche.memory.currentConversationId,
                                             action: res.text.trim(),
                                             summaryText: res.text.trim(),
-                                            who: [session.userName, session.charName],
+                                            who: [record.userName, record.charName],
                                             when: new Date().toLocaleString(),
                                             where: "专属讲堂",
                                             source: "plugin"
@@ -539,6 +544,7 @@ ${logText}`;
                                         roche.ui.toast("记忆写入失败: " + err.message); 
                                     }
                                 }
+
 
                             };
                         }

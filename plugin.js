@@ -38,11 +38,15 @@ window.RochePlugin.register({
             .sr-pomo-btn { background: #E07A5F; color: #FFF; border: none; padding: 16px; border-radius: 24px; font-size: 18px; font-weight: bold; width: 100%; margin-top: auto; cursor: pointer; box-shadow: 0 4px 12px rgba(224, 122, 95, 0.2); }
             .sr-pomo-msg { text-align: center; color: #555; font-size: 15px; font-style: italic; background: #FFF; padding: 16px; border-radius: 12px; border: 1px dashed #E07A5F; margin: 20px 0; min-height: 80px; display: flex; align-items: center; justify-content: center; }
             
-            .sr-chat-box { flex: 1; overflow-y: auto; background: #FFF; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 16px; margin-bottom: 12px; border: 1px solid #EAEFEA; box-shadow: inset 0 2px 8px rgba(0,0,0,0.02); }
-            .sr-bubble { max-width: 85%; padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
-            .sr-bubble.user { align-self: flex-end; background: #EAEFEA; color: #333; border-bottom-right-radius: 4px; }
-            .sr-bubble.ai { align-self: flex-start; background: #FFF; color: #333; border: 1px solid #6D8B74; border-bottom-left-radius: 4px; box-shadow: 2px 2px 0px rgba(109, 139, 116, 0.1); }
-            .sr-bubble.system { align-self: center; background: transparent; color: #999; font-size: 12px; text-align: center; border: none; box-shadow: none; padding: 4px; }
+            .sr-chat-box { flex: 1; overflow-y: auto; background: #FDFBF7; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; box-shadow: inset 0 2px 8px rgba(0,0,0,0.02); }
+            .msg-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: flex-end; }
+            .msg-row.user { flex-direction: row-reverse; }
+            .msg-row.system { justify-content: center; }
+            .msg-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: #EAEFEA; border: 1px solid #FFF; }
+            .sr-bubble { max-width: 75%; padding: 10px 14px; border-radius: 18px; font-size: 15px; line-height: 1.5; word-break: break-word; }
+            .sr-bubble.user { background: #6D8B74; color: #FFF; border-bottom-right-radius: 4px; }
+            .sr-bubble.ai { background: #FFF; color: #333; border: 1px solid #EAEFEA; border-bottom-left-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+            .sr-bubble.system { background: transparent; color: #999; font-size: 12px; border: none; padding: 4px; }
             
             .sr-toolbar { display: flex; gap: 8px; margin-bottom: 8px; flex-shrink: 0; }
             .sr-file-btn, .sr-action-btn { flex: 1; padding: 10px; background: #F4F7F4; border: 1px solid #D5E2D8; border-radius: 12px; color: #6D8B74; font-weight: bold; cursor: pointer; text-align: center; font-size: 13px; position: relative; overflow: hidden; }
@@ -172,7 +176,7 @@ window.RochePlugin.register({
         const session = {
           charId: null, charName: "", conversationId: null, userName: "我",
           pomoTimer: null, pomoTimeLeft: 25 * 60, isPomoRunning: false,
-          classMessages: [], documentChunks: [], currentDocTitle: "", currentChunkIdx: -1
+          classMessages: [], documentChunks: [], currentDocTitle: "", currentChunkIdx: -1, charAvatar: "", userAvatar: ""
         };
         
         // 数据库操作辅助
@@ -200,7 +204,7 @@ window.RochePlugin.register({
           if (!session.charId) return;
           session.charName = e.target.options[e.target.selectedIndex].text;
           roche.ui.toast(`已绑定: ${session.charName}`);
-          const convs = await roche.conversation.list(session.charId);
+          const charObj = await roche.character.get(session.charId); session.charAvatar = charObj.avatar || ''; const convs = await roche.conversation.list(session.charId);
           if (convs && convs.length > 0) session.conversationId = convs[0].id;
           else session.conversationId = null;
         });
@@ -251,7 +255,7 @@ ${logText}`;
             } catch(e) {}
           } catch (e) {}
           return {
-            sysPrompt: `【场景】：专属同频自习室\n【角色设定】：你是 ${session.charName}。严格遵循你的原本人设。\n【用户设定】：${session.userName} (${userBio})\n【世界书设定】：${worldbook}\n【你们的核心记忆】：${coreMem}\n【你们的历史事实记忆】：${factsMem}\n【你们最近的聊天】：\n${shortTerm}\n\n【当前任务】：你在自习室辅导陪伴用户。\n【输出格式要求】：\n1. 绝对不要使用“赛博朋克”、“AI助手”等出戏的自我称呼。\n2. 你的动作和神态描写必须使用 * * 包裹（例如 *微微皱眉*、*轻敲桌面*）。\n3. 你的对话部分，绝对不要带类似 “陈序：” 这样的前缀！直接输出你说的话和动作即可。\n4. 注意排版，对话要分段。`
+            sysPrompt: `【场景】：专属同频自习室\n【角色设定】：你是 ${session.charName}。严格遵循你的原本人设。\n【用户设定】：${session.userName} (${userBio})\n【世界书设定】：${worldbook}\n【你们的核心记忆】：${coreMem}\n【你们的历史事实记忆】：${factsMem}\n【你们最近的聊天】：\n${shortTerm}\n\n【当前任务】：你在自习室辅导陪伴用户。\n【输出格式要求】：\n1. 绝对不要使用“赛博朋克”、“AI助手”等出戏的自我称呼。\n2. 你的动作和神态描写必须使用 * * 包裹（例如 *微微皱眉*、*轻敲桌面*）。\n3. 你的对话部分，绝对不要带类似 “陈序：” 这样的前缀！直接输出你说的话和动作即可。\n4. 你现在是在用聊天软件发消息，请将你想说的话分为多句，每句话换一行。我会将你的每一行单独作为一个聊天气泡发送出去，制造连续发送多条消息的真实效果。`
           };
         };
 
@@ -276,7 +280,7 @@ ${logText}`;
             ui.charSelect.dispatchEvent(new Event('change'));
           }
           const activeUser = await roche.persona.getActiveUserPersona();
-          if(activeUser && activeUser.name) session.userName = activeUser.name;
+          if(activeUser){ session.userName = activeUser.name || activeUser.handle || '我'; session.userAvatar = activeUser.avatar || ''; }
         } catch(e) {}
 
         const requestPomoQuote = async (intent) => {
@@ -373,16 +377,33 @@ ${logText}`;
         };
 
         const appendBubble = (type, text) => {
+          const row = document.createElement("div");
+          row.className = `msg-row ${type}`;
+          if (type !== 'system') {
+            const avatar = document.createElement("img");
+            avatar.className = "msg-avatar";
+            avatar.src = type === 'ai' ? (session.charAvatar || "https://api.dicebear.com/7.x/bottts/svg?seed=ai") : (session.userAvatar || "https://api.dicebear.com/7.x/bottts/svg?seed=user");
+            avatar.onerror = () => avatar.style.display = 'none';
+            row.appendChild(avatar);
+          }
           const div = document.createElement("div");
           div.className = `sr-bubble ${type}`;
           let htmlText = text.replace(/\n/g, '<br/>');
           if (type === 'ai') {
             htmlText = htmlText.replace(new RegExp(`^${session.charName}[：:]\\s*`, 'i'), '');
-            htmlText = htmlText.replace(new RegExp(`^<br/>${session.charName}[：:]\\s*`, 'i'), '');
           }
           div.innerHTML = htmlText;
-          ui.classBox.appendChild(div);
+          row.appendChild(div);
+          ui.classBox.appendChild(row);
           ui.classBox.scrollTop = ui.classBox.scrollHeight;
+        };
+        
+        const appendAiMessageInChunks = async (text) => {
+           const parts = text.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+           for(let part of parts) {
+               appendBubble("ai", part);
+               await new Promise(r => setTimeout(r, 600)); 
+           }
         };
 
         const loadScript = (src) => new Promise((resolve, reject) => {
@@ -507,7 +528,7 @@ ${logText}`;
               const result = await roche.ai.chat({ messages: session.classMessages, temperature: 0.7 });
               session.classMessages.push({ role: "assistant", content: result.text });
               ui.classBox.innerHTML = ""; // 清除系统提示
-              appendBubble("ai", result.text);
+              await appendAiMessageInChunks(result.text);
             } catch(e) {
               appendBubble("system", "讲师准备失败: " + e.message);
             } finally {
@@ -607,7 +628,7 @@ ${logText}`;
           try {
             const result = await roche.ai.chat({ messages: session.classMessages, temperature: 0.7 });
             session.classMessages.push({ role: "assistant", content: result.text });
-            appendBubble("ai", result.text);
+            await appendAiMessageInChunks(result.text);
           } catch(err) {
             appendBubble("system", "回复失败: " + err.message);
           } finally {

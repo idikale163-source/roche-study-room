@@ -473,14 +473,17 @@ ${logText}`;
                     records.forEach(record => {
                         const item = document.createElement("div");
                         item.className = "chapter-list-item";
-                                                item.innerHTML = `
+                                                                        item.innerHTML = `
                           <div>
                             <div class="chapter-title">${record.title}</div>
                             <div class="chapter-info">共 ${record.chunks?.length || 0} 个章节 | ${new Date(record.timestamp).toLocaleString()}</div>
                           </div>
-                          <div style="display:flex; gap:8px;">
-                            <button class="btn-mem" data-id="${record.id}" style="background:#8c9b8d; color:white; border:none; border-radius:4px; padding:4px 8px; cursor:pointer; font-size:12px;">写记忆</button>
-                            <button class="btn-del" data-id="${record.id}" style="background:#d9534f; color:white; border:none; border-radius:4px; padding:4px 8px; cursor:pointer; font-size:12px;">删除</button>
+                          <div style="display:flex; flex-direction: column; gap:4px; align-items: flex-end;">
+                            <div style="display:flex; gap:8px;">
+                                <button class="btn-export" data-id="${record.id}" style="background:#5b7c62; color:white; border:none; border-radius:4px; padding:4px 8px; cursor:pointer; font-size:12px;">↓ 导出完整记录</button>
+                                <button class="btn-mem" data-id="${record.id}" style="background:#8c9b8d; color:white; border:none; border-radius:4px; padding:4px 8px; cursor:pointer; font-size:12px;">写记忆</button>
+                                <button class="btn-del" data-id="${record.id}" style="background:#d9534f; color:white; border:none; border-radius:4px; padding:4px 8px; cursor:pointer; font-size:12px;">删除</button>
+                            </div>
                           </div>
                         `;
                         // 点击记录恢复，进入【章节选择页】
@@ -526,6 +529,56 @@ ${logText}`;
                                 }
                             };
                         }
+                        const btnExport = item.querySelector(".btn-export");
+                        if (btnExport) {
+                            btnExport.onclick = (e) => {
+                                e.stopPropagation();
+                                if (!record.chapterMessages) {
+                                    roche.ui.toast("该讲堂暂无任何上课聊天记录");
+                                    return;
+                                }
+                                let out = `# 📖 【${record.title}】 - 完整自习室记录
+
+`;
+                                out += `*创建时间：${new Date(record.timestamp).toLocaleString()}*
+
+---
+
+`;
+                                
+                                for (let i = 0; i < (record.chunks?.length || 0); i++) {
+                                    const chunk = record.chunks[i];
+                                    out += `## 📚 第 ${i + 1} 章：${chunk.title}
+
+`;
+                                    
+                                    const msgs = record.chapterMessages[i];
+                                    if (!msgs || msgs.length === 0) {
+                                        out += `*(本章暂无学习记录)*
+
+`;
+                                    } else {
+                                        msgs.forEach(m => {
+                                            if (m.role === 'system') return;
+                                            const speaker = m.role === 'assistant' ? record.charName : record.userName;
+                                            out += `**${speaker}**: ${m.content}
+
+`;
+                                        });
+                                    }
+                                    out += `---
+
+`;
+                                }
+                                
+                                const a = document.createElement("a");
+                                a.href = URL.createObjectURL(new Blob([out], { type: "text/markdown" }));
+                                a.download = `完整讲堂记录_${record.title}.md`; 
+                                a.click();
+                                roche.ui.toast("已导出为 Markdown 文件");
+                            };
+                        }
+
                         ui.historyList.appendChild(item);
                     });
                 };
@@ -687,17 +740,23 @@ ${logText}`;
         };
         
         // 绑定事件：课堂 -> 章节列表 (退出课堂，刻入记忆)
-        ui.backFromClass.onclick = async () => {
+                ui.backFromClass.onclick = async () => {
           ui.pageClass.classList.remove("active");
           ui.pageChapterList.classList.add("active");
-          // 只保存到本地数据库，不自动写入主记忆
+          
+          // 同步当前房间聊天到章节记忆中
+          if (session.currentChunkIdx !== undefined && session.chapterMessages) {
+              session.chapterMessages[session.currentChunkIdx] = session.classMessages;
+          }
+          
           try {
             const db = await openDB();
-            const tx = db.transaction("class_records", "readwrite");
-            const store = tx.objectStore("class_records");
+            const tx = db.transaction("lectures", "readwrite");
+            const store = tx.objectStore("lectures");
             await store.put(session);
           } catch (e) { console.error("自动保存到本地失败", e); }
         };
+
 
         // ====== 聊天逻辑 ======
         ui.classSend.onclick = async () => {

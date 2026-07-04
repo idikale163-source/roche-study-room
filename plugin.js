@@ -854,8 +854,6 @@ ${logText}`;
           
           ui.docModal.querySelector("h4").textContent = "📝 考点笔记";
           
-          if (ui.btnExportNotes) ui.btnExportNotes.style.display = "block";
-          
           // Check cache first
           if (!session.chapterNotes) session.chapterNotes = {};
           if (session.chapterNotes[session.currentChunkIdx]) {
@@ -866,7 +864,7 @@ ${logText}`;
           
           ui.docModalContent.textContent = "正在为您提炼本节课的考点笔记，请稍候...";
           ui.docModal.style.display = "flex";
-          ui.btnExportNotes.style.display = "none"; // Hide during generation
+          if (ui.btnExportNotes) ui.btnExportNotes.style.display = "none"; // Hide during generation
           
           const currentDoc = session.documentChunks[session.currentChunkIdx]?.content || "";
           const chatHistory = session.classMessages.filter(m => m.role !== 'system').map(m => `${m.role}: ${m.content}`).join('\n');

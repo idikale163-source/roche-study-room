@@ -490,7 +490,8 @@ ${logText}`;
                         item.querySelector("div").onclick = () => {
                             session.documentChunks = record.chunks || [];
                             session.currentDocTitle = record.title;
-                            session.classMessages = record.messages || []; // 这个其实已经没用了，因为我们是按章节新建课堂
+                            session.classMessages = record.messages || [];
+                            session.chapterNotes = record.chapterNotes ? JSON.parse(JSON.stringify(record.chapterNotes)) : {};
                             renderChapterList();
                             ui.pageClassEntry.classList.remove("active");
                             ui.pageChapterList.classList.add("active");
@@ -851,9 +852,21 @@ ${logText}`;
                 ui.classExport.onclick = async () => {
           if(!session.documentChunks || session.documentChunks.length === 0) return;
           
-          ui.docModalContent.textContent = "正在为您提炼本节课的考点笔记，请稍候...";
           ui.docModal.querySelector("h4").textContent = "📝 考点笔记";
+          
+          if (ui.btnExportNotes) ui.btnExportNotes.style.display = "block";
+          
+          // Check cache first
+          if (!session.chapterNotes) session.chapterNotes = {};
+          if (session.chapterNotes[session.currentChunkIdx]) {
+              ui.docModalContent.textContent = session.chapterNotes[session.currentChunkIdx];
+              ui.docModal.style.display = "flex";
+              return;
+          }
+          
+          ui.docModalContent.textContent = "正在为您提炼本节课的考点笔记，请稍候...";
           ui.docModal.style.display = "flex";
+          ui.btnExportNotes.style.display = "none"; // Hide during generation
           
           const currentDoc = session.documentChunks[session.currentChunkIdx]?.content || "";
           const chatHistory = session.classMessages.filter(m => m.role !== 'system').map(m => `${m.role}: ${m.content}`).join('\n');
@@ -872,6 +885,23 @@ ${chatHistory}`;
           try {
               const res = await roche.ai.chat({ messages: [{role: "user", content: prompt}], temperature: 0.3 });
               ui.docModalContent.textContent = res.text;
+              if (!session.chapterNotes) session.chapterNotes = {};
+              session.chapterNotes[session.currentChunkIdx] = res.text;
+              if (ui.btnExportNotes) ui.btnExportNotes.style.display = "block";
+              // Save to DB immediately
+              if (session.id) {
+                  const db = await openDB();
+                  const tx = db.transaction("lectures", "readwrite");
+                  const store = tx.objectStore("lectures");
+                  const req = store.get(session.id);
+                  req.onsuccess = () => {
+                      const record = req.result;
+                      if (record) {
+                          record.chapterNotes = JSON.parse(JSON.stringify(session.chapterNotes));
+                          store.put(record);
+                      }
+                  };
+              }
           } catch(e) {
               ui.docModalContent.textContent = "生成笔记失败: " + e.message;
           }

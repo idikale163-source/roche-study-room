@@ -508,16 +508,28 @@ ${logText}`;
                         if (btnMem) {
                             btnMem.onclick = async (e) => {
                                 e.stopPropagation();
-                                if (confirm("确定将这节课的讨论提取并写入 Roche 主记忆吗？(写入后不可在插件内撤销)")) {
+                                                                if (confirm("确定将这门课的讨论提取并写入 Roche 主记忆吗？(写入后不可在插件内撤销)")) {
                                     roche.ui.toast("正在提取记忆...");
-                                    const logText = record.classMessages.filter(m => m.role !== 'system').map(m => `${m.role === 'assistant' ? record.charName : record.userName}: ${m.content}`).join('\n');
+                                    let allLogs = "";
+                                    if (record.chapterMessages) {
+                                        for (let i = 0; i < (record.chunks?.length || 0); i++) {
+                                            const msgs = record.chapterMessages[i];
+                                            if(msgs) {
+                                                allLogs += msgs.filter(m => m.role !== 'system').map(m => `${m.role === 'assistant' ? session.charName : session.userName}: ${m.content}`).join('\n') + '\n';
+                                            }
+                                        }
+                                    }
+                                    if (!allLogs.trim()) {
+                                        roche.ui.toast("没有可提取的聊天记录");
+                                        return;
+                                    }
                                     try {
-                                        const res = await roche.ai.chat({ messages: [{ role: "system", content: generateMemoryArchivalPrompt(logText) }], temperature: 0.3 });
+                                        const res = await roche.ai.chat({ messages: [{ role: "system", content: generateMemoryArchivalPrompt(allLogs) }], temperature: 0.3 });
                                         await roche.memory.write({
-                                            conversationId: record.conversationId || roche.memory.currentConversationId,
+                                            conversationId: session.conversationId,
                                             action: res.text.trim(),
                                             summaryText: res.text.trim(),
-                                            who: [record.userName, record.charName],
+                                            who: [session.userName, session.charName],
                                             when: new Date().toLocaleString(),
                                             where: "专属讲堂",
                                             source: "plugin"
@@ -527,6 +539,7 @@ ${logText}`;
                                         roche.ui.toast("记忆写入失败: " + err.message); 
                                     }
                                 }
+
                             };
                         }
                         const btnExport = item.querySelector(".btn-export");

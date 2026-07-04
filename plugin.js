@@ -472,12 +472,15 @@ ${logText}`;
                     records.forEach(record => {
                         const item = document.createElement("div");
                         item.className = "chapter-list-item";
-                        item.innerHTML = `
+                                                item.innerHTML = `
                           <div>
                             <div class="chapter-title">${record.title}</div>
-                            <div class="chapter-info">共 ${record.chunks?.length || 0} 个章节</div>
+                            <div class="chapter-info">共 ${record.chunks?.length || 0} 个章节 | ${new Date(record.timestamp).toLocaleString()}</div>
                           </div>
-                          <button style="background:#FF6B6B; color:#FFF; border:none; border-radius:4px; padding:6px 12px; cursor:pointer;">删除</button>
+                          <div style="display:flex; gap:8px;">
+                            <button class="btn-mem" data-id="${record.id}" style="background:#8c9b8d; color:white; border:none; border-radius:4px; padding:4px 8px; cursor:pointer; font-size:12px;">写记忆</button>
+                            <button class="btn-del" data-id="${record.id}" style="background:#d9534f; color:white; border:none; border-radius:4px; padding:4px 8px; cursor:pointer; font-size:12px;">删除</button>
+                          </div>
                         `;
                         // 点击记录恢复，进入【章节选择页】
                         item.querySelector("div").onclick = () => {
@@ -492,8 +495,8 @@ ${logText}`;
                             e.stopPropagation();
                             if (confirm("确定删除这条课堂记录吗？")) {
                                 const db = await openDB();
-                                await db.transaction("class_records", "readwrite").objectStore("class_records").delete(record.id);
-                                await renderHistory();
+                                await db.transaction("lectures", "readwrite").objectStore("lectures").delete(record.id);
+                                await loadHistory();
                             }
                         };
 

@@ -503,8 +503,7 @@ ${logText}`;
                                 e.stopPropagation();
                                 if (confirm("确定将这节课的讨论提取并写入 Roche 主记忆吗？(写入后不可在插件内撤销)")) {
                                     roche.ui.toast("正在提取记忆...");
-                                    const logText = record.classMessages.filter(m => m.role !== 'system').map(m => `${m.role === 'assistant' ? record.charName : record.userName}: ${m.content}`).join('
-');
+                                    const logText = record.classMessages.filter(m => m.role !== 'system').map(m => `${m.role === 'assistant' ? record.charName : record.userName}: ${m.content}`).join('\n');
                                     try {
                                         const res = await roche.ai.chat({ messages: [{ role: "system", content: generateMemoryArchivalPrompt(logText) }], temperature: 0.3 });
                                         await roche.memory.write({

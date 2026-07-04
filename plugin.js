@@ -659,7 +659,9 @@ ${logText}`;
             if(ui.viewDocBtn) {
                 ui.viewDocBtn.onclick = () => {
                     if(session.documentChunks && session.documentChunks[chunkIdx]) {
-                        ui.docModalContent.textContent = session.documentChunks[chunkIdx].content; ui.docModal.querySelector('h4').textContent = '📄 资料原文';
+                        ui.docModalContent.textContent = session.documentChunks[chunkIdx].content; 
+                        ui.docModal.querySelector('h4').textContent = '📄 资料原文';
+                        if(ui.btnExportNotes) ui.btnExportNotes.style.display = "none";
                         ui.docModal.style.display = "flex";
                     } else {
                         roche.ui.toast("当前章节没有资料原文");
@@ -809,6 +811,7 @@ ${logText}`;
                     if (record) {
                         // Ensure deep copy to avoid IndexedDB clone errors
                         record.chapterMessages = JSON.parse(JSON.stringify(session.chapterMessages));
+                        record.chapterNotes = session.chapterNotes ? JSON.parse(JSON.stringify(session.chapterNotes)) : {};
                         const putReq = store.put(record);
                         putReq.onsuccess = () => console.log("Saved successfully to DB");
                         putReq.onerror = (e) => console.error("Put failed", e);

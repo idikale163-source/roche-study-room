@@ -330,10 +330,16 @@ ${logText}`;
           }
         };
 
-        // --- 智能语义分章 ---
+                // --- 智能语义分章 ---
         const smartChunkText = (text, maxSize = 2500) => {
           let processedText = text.replace(/([。！？!?])/g, "$1\n");
           const lines = processedText.split('\n');
+          
+          // 如果全文少于 10000 字，直接作为一个大章节返回，不进行任何切分
+          if (text.length < 10000) {
+            return [{ title: "全文内容", content: text }];
+          }
+          
           const chunks = [];
           let currentChunk = "";
           let currentTitle = "引言/前言";

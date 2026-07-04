@@ -606,21 +606,11 @@ ${logText}`;
                   const prevMsgs = session.chapterMessages[chunkIdx - 1];
                   const lastAiMsgs = prevMsgs.filter(m => m.role === 'assistant').slice(-2);
                   if(lastAiMsgs.length > 0) {
-                      prevSummary = "
-
-【上一章的前情提要（你之前说的）】：
-" + lastAiMsgs.map(m => m.content).join("
-");
+                      prevSummary = "\n\n【上一章的前情提要（你之前说的）】：\n" + lastAiMsgs.map(m => m.content).join("\n");
                   }
               }
               
-              const sysPrompt = `${ctx.sysPrompt}${prevSummary}
-
-【本节课的学习资料 (${chunkData.title})】：
-${chunkData.content}
-
-【任务指令】：
-主动和用户打招呼，用你的口吻概括这段资料的核心内容，并引导用户开始复习或提问。`;
+              const sysPrompt = `${ctx.sysPrompt}${prevSummary}\n\n【本节课的学习资料 (${chunkData.title})】：\n${chunkData.content}\n\n【任务指令】：\n主动和用户打招呼，用你的口吻概括这段资料的核心内容，并引导用户开始复习或提问。`;
 
               
               session.classMessages.push({ role: "system", content: sysPrompt });

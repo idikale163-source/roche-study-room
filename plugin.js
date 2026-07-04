@@ -754,12 +754,19 @@ ${logText}`;
             try {
                const db = await openDB();
                const tx = db.transaction("lectures", "readwrite");
-               tx.objectStore("lectures").add({
+               const newRecord = {
                    timestamp: Date.now(),
                    title: session.currentDocTitle,
                    chunks: [...session.documentChunks],
-                   messages: []
-               });
+                   chapterMessages: []
+               };
+               const req = tx.objectStore("lectures").add(newRecord);
+               req.onsuccess = (e) => {
+                   session.id = e.target.result; // 保存当前课堂在DB中的主键ID
+                   session.timestamp = newRecord.timestamp;
+                   session.title = newRecord.title;
+                   session.chapterMessages = [];
+               };
             } catch(dbErr) { console.error("DB Save Error", dbErr); }
             
             ui.pageClassEntry.classList.remove("active");
@@ -791,10 +798,19 @@ ${logText}`;
           }
           
           try {
-            const db = await openDB();
-            const tx = db.transaction("lectures", "readwrite");
-            const store = tx.objectStore("lectures");
-            await store.put(session);
+            if (session.id) {
+                const db = await openDB();
+                const tx = db.transaction("lectures", "readwrite");
+                const store = tx.objectStore("lectures");
+                const req = store.get(session.id);
+                req.onsuccess = async () => {
+                    const record = req.result;
+                    if (record) {
+                        record.chapterMessages = session.chapterMessages;
+                        await store.put(record);
+                    }
+                };
+            }
           } catch (e) { console.error("自动保存到本地失败", e); }
         };
 

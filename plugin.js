@@ -657,6 +657,30 @@ ${logText}`;
             ui.currentClassTitle.textContent = chunkData.title;
             
             // 绑定查看原文按钮，使用当前的 chunkIdx
+            let btnExportNotes = ui.docModal.querySelector("#btn-export-notes");
+            if (!btnExportNotes) {
+                btnExportNotes = document.createElement("button");
+                btnExportNotes.id = "btn-export-notes";
+                btnExportNotes.textContent = "↓ 导出笔记";
+                btnExportNotes.style.cssText = "background:#4CAF50; color:white; border:none; border-radius:4px; padding:4px 12px; cursor:pointer; font-size:14px; margin-right:8px; display:none;";
+                
+                btnExportNotes.onclick = () => {
+                    const text = ui.docModalContent.textContent;
+                    const blob = new Blob([text], {type: "text/markdown;charset=utf-8"});
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `考点笔记-${chunkData.title}.md`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                };
+                
+                const header = ui.docModal.querySelector("div");
+                // Insert before the close button
+                header.insertBefore(btnExportNotes, ui.closeDocModal);
+            }
+            ui.btnExportNotes = btnExportNotes;
+
             if(ui.viewDocBtn) {
                 ui.viewDocBtn.onclick = () => {
                     if(session.documentChunks && session.documentChunks[chunkIdx]) {

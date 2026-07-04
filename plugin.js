@@ -1,7 +1,8 @@
 window.RochePlugin.register({
   id: "roche-companion-study-room",
   name: "同频自习室",
-  version: "1.4.0",
+  description: "沉浸式学习陪伴插件。支持导入本地资料自动切分章节，并在专属自习室内由 AI 提供专业且通俗的讲解。功能包括分体式连发气泡聊天、原文对照查看、一键总结考点笔记，以及历史课堂进度保存。",
+  version: "1.4.3",
   apps: [
     {
       id: "roche-study-room-app",

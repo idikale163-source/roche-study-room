@@ -608,6 +608,16 @@ ${logText}`;
 `;
                                         });
                                     }
+                                    
+                                    // Append notes if exist
+                                    if (record.chapterNotes && record.chapterNotes[i]) {
+                                        out += `### 📝 本章考点笔记
+
+${record.chapterNotes[i]}
+
+`;
+                                    }
+                                    
                                     out += `---
 
 `;

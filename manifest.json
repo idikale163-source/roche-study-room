@@ -1,0 +1,17 @@
+{
+  "id": "sully-study-room",
+  "name": "同频自习室",
+  "version": "1.0.0",
+  "description": "高颜值陪伴自习室。包含纯净番茄钟、每日幸运指数，以及支持上传PDF/Word文档的专属赛博讲堂。",
+  "author": "Sully",
+  "entry": "https://raw.githubusercontent.com/idikale163-source/roche-study-room/main/plugin.js",
+  "hash": "",
+  "permissions": [
+    "persona:read",
+    "character:read",
+    "memory:read",
+    "memory:write",
+    "ai:chat",
+    "ui"
+  ]
+}

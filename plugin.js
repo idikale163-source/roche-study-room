@@ -511,8 +511,9 @@ ${logText}`;
                                 
                                 // 拦截空课程和非法数据
                                 let validAiMsgsCount = 0;
-                                if (record.chapterMessages && Array.isArray(record.chapterMessages)) {
-                                    for (const ch of record.chapterMessages) {
+                                if (record.chapterMessages) {
+                                    const chapters = Array.isArray(record.chapterMessages) ? record.chapterMessages : Object.values(record.chapterMessages);
+                                    for (const ch of chapters) {
                                         if (ch && Array.isArray(ch)) {
                                             for (const msg of ch) {
                                                 if (msg.role === 'assistant') {
@@ -579,7 +580,7 @@ ${logText}`;
                                 let out = `# 📖 【${record.title}】 - 完整自习室记录
 
 `;
-                                out += `*创建时间：${new Date(record.timestamp).toLocaleString()}*
+                                out += `*创建时间：${record.timestamp ? new Date(record.timestamp).toLocaleString() : '未知时间'}*
 
 ---
 

@@ -138,9 +138,22 @@ window.RochePlugin.register({
             <h3 style="margin:0 0 12px 0; color:#6D8B74; text-align:center; font-size:16px;" id="current-class-title">当前课堂</h3>
             <div class="sr-toolbar">
               <button class="sr-action-btn" id="class-export">📥 导出本节课笔记</button>
+
+              <button class="sr-action-btn" id="view-doc-btn" style="margin-left: 8px;">📄 查看当前资料</button>
+
             </div>
             <div class="sr-chat-box" id="class-box"></div>
             <div class="sr-input-area">
+
+            <!-- 原文弹窗 -->
+            <div id="doc-modal" style="display:none; position:absolute; top:10%; left:5%; right:5%; bottom:10%; background:#fff; border-radius:12px; z-index:999; box-shadow:0 4px 20px rgba(0,0,0,0.3); flex-direction:column; overflow:hidden;">
+                <div style="padding:12px; background:#6D8B74; color:#fff; display:flex; justify-content:space-between; align-items:center;">
+                    <h4 style="margin:0;">📄 资料原文</h4>
+                    <button id="close-doc-modal" style="background:none; border:none; color:#fff; font-size:18px; cursor:pointer;">✖</button>
+                </div>
+                <div id="doc-modal-content" style="flex:1; overflow-y:auto; padding:12px; font-size:14px; color:#333; white-space:pre-wrap; line-height:1.6;"></div>
+            </div>
+
               <input type="text" id="class-input" placeholder="提问或讨论..." disabled>
               <button id="class-send" disabled>发送</button>
             </div>
@@ -161,7 +174,13 @@ window.RochePlugin.register({
           classBox: container.querySelector("#class-box"),
           classInput: container.querySelector("#class-input"),
           classSend: container.querySelector("#class-send"),
+          
           classExport: container.querySelector("#class-export"),
+          viewDocBtn: container.querySelector("#view-doc-btn"),
+          docModal: container.querySelector("#doc-modal"),
+          closeDocModal: container.querySelector("#close-doc-modal"),
+          docModalContent: container.querySelector("#doc-modal-content"),
+
           btnClassEntry: container.querySelector("#btn-class-entry"),
           backFromClassEntry: container.querySelector("#back-from-class-entry"),
           fileEntry: container.querySelector("#class-file-entry"),
@@ -469,14 +488,41 @@ ${logText}`;
                             ui.pageClassEntry.classList.remove("active");
                             ui.pageChapterList.classList.add("active");
                         };
-                        item.querySelector("button").onclick = async (e) => {
+                        item.querySelector(".btn-del").onclick = async (e) => {
                             e.stopPropagation();
-                            if(confirm("确定删除这条记录吗？")) {
-                                const txDel = db.transaction("lectures", "readwrite");
-                                txDel.objectStore("lectures").delete(record.id);
-                                txDel.oncomplete = () => loadHistory();
+                            if (confirm("确定删除这条课堂记录吗？")) {
+                                const db = await openDB();
+                                await db.transaction("class_records", "readwrite").objectStore("class_records").delete(record.id);
+                                await renderHistory();
                             }
                         };
+
+                        const btnMem = item.querySelector(".btn-mem");
+                        if (btnMem) {
+                            btnMem.onclick = async (e) => {
+                                e.stopPropagation();
+                                if (confirm("确定将这节课的讨论提取并写入 Roche 主记忆吗？(写入后不可在插件内撤销)")) {
+                                    roche.ui.toast("正在提取记忆...");
+                                    const logText = record.classMessages.filter(m => m.role !== 'system').map(m => `${m.role === 'assistant' ? record.charName : record.userName}: ${m.content}`).join('
+');
+                                    try {
+                                        const res = await roche.ai.chat({ messages: [{ role: "system", content: generateMemoryArchivalPrompt(logText) }], temperature: 0.3 });
+                                        await roche.memory.write({
+                                            conversationId: record.conversationId || roche.memory.currentConversationId,
+                                            action: res.text.trim(),
+                                            summaryText: res.text.trim(),
+                                            who: [record.userName, record.charName],
+                                            when: new Date().toLocaleString(),
+                                            where: "专属讲堂",
+                                            source: "plugin"
+                                        });
+                                        roche.ui.toast("记忆刻入完成！");
+                                    } catch(err) { 
+                                        roche.ui.toast("记忆写入失败: " + err.message); 
+                                    }
+                                }
+                            };
+                        }
                         ui.historyList.appendChild(item);
                     });
                 };
@@ -597,23 +643,13 @@ ${logText}`;
         ui.backFromClass.onclick = async () => {
           ui.pageClass.classList.remove("active");
           ui.pageChapterList.classList.add("active");
-          if (session.classMessages.length > 2) { // 大于2是因为包含了system和初始的打招呼
-            roche.ui.toast("正在将这节课的讨论刻入主数据库...");
-            const logText = session.classMessages.filter(m => m.role !== 'system').map(m => `${m.role === 'assistant' ? session.charName : session.userName}: ${m.content}`).join('\n');
-            try {
-              const res = await roche.ai.chat({ messages: [{ role: "system", content: generateMemoryArchivalPrompt(logText) }], temperature: 0.3 });
-              await roche.memory.write({
-                conversationId: session.conversationId,
-                action: res.text.trim(),
-                summaryText: res.text.trim(),
-                who: [session.userName, session.charName],
-                when: "刚刚",
-                where: "专属讲堂",
-                source: "plugin"
-              });
-              roche.ui.toast("记忆刻入完成！");
-            } catch(e) { roche.ui.toast("记忆写入失败: " + e.message); }
-          }
+          // 只保存到本地数据库，不自动写入主记忆
+          try {
+            const db = await openDB();
+            const tx = db.transaction("class_records", "readwrite");
+            const store = tx.objectStore("class_records");
+            await store.put(session);
+          } catch (e) { console.error("自动保存到本地失败", e); }
         };
 
         // ====== 聊天逻辑 ======
@@ -651,6 +687,15 @@ ${logText}`;
           a.href = URL.createObjectURL(new Blob([out], { type: "text/plain" }));
           a.download = `笔记_${session.currentClassTitle}.txt`; a.click();
         };
+
+          ui.viewDocBtn.onclick = () => {
+              ui.docModalContent.textContent = session.documentChunks[idx].content;
+              ui.docModal.style.display = "flex";
+          };
+          ui.closeDocModal.onclick = () => {
+              ui.docModal.style.display = "none";
+          };
+
       },
       async unmount(container) {
         container.replaceChildren();

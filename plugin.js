@@ -512,20 +512,21 @@ ${logText}`;
                                 // 拦截空课程和非法数据
                                 let validAiMsgsCount = 0;
                                 if (record.chapterMessages) {
+                                    // Support both array of chapters and object map of chapters
                                     const chapters = Array.isArray(record.chapterMessages) ? record.chapterMessages : Object.values(record.chapterMessages);
                                     for (const ch of chapters) {
-                                        if (ch && Array.isArray(ch)) {
-                                            for (const msg of ch) {
-                                                if (msg.role === 'assistant') {
-                                                    validAiMsgsCount++;
-                                                }
+                                        // Handle both {messages: [...]} format and direct [...] format
+                                        const msgList = (ch && Array.isArray(ch.messages)) ? ch.messages : (Array.isArray(ch) ? ch : []);
+                                        for (const msg of msgList) {
+                                            if (msg && msg.role === 'assistant') {
+                                                validAiMsgsCount++;
                                             }
                                         }
                                     }
                                 }
                                 
                                 if (validAiMsgsCount === 0) {
-                                    roche.ui.toast("这门课里导师还没有讲过话，没有可提取的内容哦~");
+                                    roche.ui.toast("这门课里导师还没有讲过话，没有可提取的记忆哦~");
                                     return;
                                 }
 

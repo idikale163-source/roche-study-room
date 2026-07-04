@@ -1,7 +1,7 @@
 window.RochePlugin.register({
   id: "roche-companion-study-room",
   name: "同频自习室",
-  version: "1.2.0",
+  version: "1.4.0",
   apps: [
     {
       id: "roche-study-room-app",
@@ -30,7 +30,6 @@ window.RochePlugin.register({
             .sr-val { font-size: 26px; font-weight: 800; color: #333; margin: 8px 0; }
             .sr-label { font-size: 12px; color: #777; }
             .sr-icon { font-size: 32px; margin-bottom: 4px; }
-
             .sr-page { display: none; position: absolute; top:0; left:0; width:100%; height:100%; background: #FDFBF7; flex-direction: column; padding: 16px; z-index: 10; }
             .sr-page.active { display: flex; }
             .sr-back-btn { align-self: flex-start; background: #EAEFEA; color: #6D8B74; border: none; padding: 8px 16px; border-radius: 20px; font-weight: bold; cursor: pointer; margin-bottom: 12px; display: flex; align-items: center; gap: 4px; }
@@ -38,7 +37,7 @@ window.RochePlugin.register({
             .sr-timer { font-size: 72px; font-weight: 900; color: #E07A5F; text-align: center; margin: 40px 0; font-variant-numeric: tabular-nums; text-shadow: 2px 2px 0px rgba(224, 122, 95, 0.1); }
             .sr-pomo-btn { background: #E07A5F; color: #FFF; border: none; padding: 16px; border-radius: 24px; font-size: 18px; font-weight: bold; width: 100%; margin-top: auto; cursor: pointer; box-shadow: 0 4px 12px rgba(224, 122, 95, 0.2); }
             .sr-pomo-msg { text-align: center; color: #555; font-size: 15px; font-style: italic; background: #FFF; padding: 16px; border-radius: 12px; border: 1px dashed #E07A5F; margin: 20px 0; min-height: 80px; display: flex; align-items: center; justify-content: center; }
-
+            
             .sr-chat-box { flex: 1; overflow-y: auto; background: #FFF; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 16px; margin-bottom: 12px; border: 1px solid #EAEFEA; box-shadow: inset 0 2px 8px rgba(0,0,0,0.02); }
             .sr-bubble { max-width: 85%; padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
             .sr-bubble.user { align-self: flex-end; background: #EAEFEA; color: #333; border-bottom-right-radius: 4px; }
@@ -52,10 +51,15 @@ window.RochePlugin.register({
             .sr-input-area input { flex: 1; padding: 12px; border: 1px solid #D5E2D8; border-radius: 20px; font-size: 14px; outline: none; }
             .sr-input-area button { padding: 0 20px; background: #6D8B74; color: #FFF; border: none; border-radius: 20px; font-weight: bold; cursor: pointer; }
             .sr-input-area button:disabled { background: #B0C4B4; }
+            
+            .chapter-list-item { background: #FFF; padding: 16px; border-radius: 12px; border: 1px solid #EAEFEA; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.2s; }
+            .chapter-list-item:active { background: #F4F7F4; }
+            .chapter-title { font-size: 16px; font-weight: bold; color: #333; }
+            .chapter-info { font-size: 12px; color: #777; margin-top: 4px; }
           `;
           document.head.appendChild(style);
         }
-
+        
         container.innerHTML = `
           <div class="sr-wrap" id="sr-home">
             <div class="sr-header">
@@ -85,14 +89,14 @@ window.RochePlugin.register({
                 <div class="sr-val" style="font-size: 18px;">深潜番茄钟</div>
                 <div class="sr-label">25分钟纯净陪伴 / 结束自动写入记忆</div>
               </div>
-              <div class="sr-card span-2" id="btn-class" style="background: #FFF; border: 1px solid #D5E2D8;">
+              <div class="sr-card span-2" id="btn-class-entry" style="background: #FFF; border: 1px solid #D5E2D8;">
                 <div class="sr-icon">📚</div>
                 <div class="sr-val" style="font-size: 18px; color: #6D8B74;">专属讲堂</div>
-                <div class="sr-label">上传资料，分章节讨论，全记忆互通</div>
+                <div class="sr-label">导入资料，智能拆分，沉浸上课</div>
               </div>
             </div>
           </div>
-
+          
           <!-- 番茄钟页面 -->
           <div class="sr-page" id="page-pomo">
             <button class="sr-back-btn" id="back-from-pomo">← 退回大厅</button>
@@ -100,25 +104,38 @@ window.RochePlugin.register({
             <div class="sr-pomo-msg" id="pomo-msg">等待入座...</div>
             <button class="sr-pomo-btn" id="pomo-action">开始专注</button>
           </div>
-
-          <!-- 讲堂页面 -->
+          
+          <!-- 层级 1：讲堂资料室 (历史记录 & 导入) -->
+          <div class="sr-page" id="page-class-entry">
+            <button class="sr-back-btn" id="back-from-class-entry">← 退回大厅</button>
+            <h2 style="color:#6D8B74; margin-bottom: 8px;">讲堂资料室</h2>
+            <div style="background:#FFF; padding: 16px; border-radius:12px; border:1px solid #EAEFEA; margin-bottom: 16px;">
+                <div style="font-size:14px; color:#555; margin-bottom:12px;">导入学习资料（PDF/Docx/TXT），AI 将通读并分发章节。</div>
+                <div class="sr-file-btn" style="width:100%;">
+                  📎 导入新资料并解析
+                  <input type="file" id="class-file-entry" accept=".txt,.md,.pdf,.docx,.json" />
+                </div>
+            </div>
+            <h3 style="color:#6D8B74; font-size:16px;">历史讲堂记录</h3>
+            <div id="class-history-list" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;"></div>
+          </div>
+          
+          <!-- 层级 2：章节选择页面 (解析完成后展示) -->
+          <div class="sr-page" id="page-chapter-list">
+            <button class="sr-back-btn" id="back-from-chapter-list">← 退回资料室</button>
+            <h2 style="color:#6D8B74; margin-bottom: 8px;" id="chapter-list-title">课本目录</h2>
+            <div style="font-size:12px; color:#777; margin-bottom:16px;">解析完成，请点击下方章节进入专属课堂</div>
+            <div id="chapter-list-container" style="flex:1; overflow-y:auto;"></div>
+          </div>
+          
+          <!-- 层级 3：实际上课聊天页面 -->
           <div class="sr-page" id="page-class">
-            <button class="sr-back-btn" id="back-from-class">← 结课并刻入记忆</button>
-            <div class="sr-chat-box" id="class-box"></div>
-            
-            <!-- 章节选择区 (隐藏直到文件解析完毕) -->
-            <div id="class-chapter-area" style="display:none; gap:8px; margin-bottom:8px;">
-              <select id="class-chapter-select" style="flex:1; padding:8px; border-radius:12px; border:1px solid #D5E2D8; outline:none;"></select>
-              <button id="class-chapter-btn" class="sr-action-btn" style="background:#6D8B74; color:#FFF;">开始讲解此章</button>
-            </div>
-
+            <button class="sr-back-btn" id="back-from-class">← 返回目录</button>
+            <h3 style="margin:0 0 12px 0; color:#6D8B74; text-align:center; font-size:16px;" id="current-class-title">当前课堂</h3>
             <div class="sr-toolbar">
-              <div class="sr-file-btn">
-                📎 导入资料 (TXT/PDF/Docx)
-                <input type="file" id="class-file" accept=".txt,.md,.pdf,.docx,.json" />
-              </div>
-              <button class="sr-action-btn" id="class-export">📥 导出笔记</button>
+              <button class="sr-action-btn" id="class-export">📥 导出本节课笔记</button>
             </div>
+            <div class="sr-chat-box" id="class-box"></div>
             <div class="sr-input-area">
               <input type="text" id="class-input" placeholder="提问或讨论..." disabled>
               <button id="class-send" disabled>发送</button>
@@ -129,6 +146,8 @@ window.RochePlugin.register({
         const ui = {
           home: container.querySelector("#sr-home"),
           pagePomo: container.querySelector("#page-pomo"),
+          pageClassEntry: container.querySelector("#page-class-entry"),
+          pageChapterList: container.querySelector("#page-chapter-list"),
           pageClass: container.querySelector("#page-class"),
           charSelect: container.querySelector("#sr-char-select"),
           btnCloseApp: container.querySelector("#btn-close-app"),
@@ -136,91 +155,106 @@ window.RochePlugin.register({
           pomoMsg: container.querySelector("#pomo-msg"),
           pomoAction: container.querySelector("#pomo-action"),
           classBox: container.querySelector("#class-box"),
-          classFile: container.querySelector("#class-file"),
           classInput: container.querySelector("#class-input"),
           classSend: container.querySelector("#class-send"),
           classExport: container.querySelector("#class-export"),
-          chapterArea: container.querySelector("#class-chapter-area"),
-          chapterSelect: container.querySelector("#class-chapter-select"),
-          chapterBtn: container.querySelector("#class-chapter-btn"),
+          btnClassEntry: container.querySelector("#btn-class-entry"),
+          backFromClassEntry: container.querySelector("#back-from-class-entry"),
+          fileEntry: container.querySelector("#class-file-entry"),
+          historyList: container.querySelector("#class-history-list"),
+          chapterListContainer: container.querySelector("#chapter-list-container"),
+          chapterListTitle: container.querySelector("#chapter-list-title"),
+          backFromChapterList: container.querySelector("#back-from-chapter-list"),
+          backFromClass: container.querySelector("#back-from-class"),
+          currentClassTitle: container.querySelector("#current-class-title")
         };
 
         const session = {
           charId: null, charName: "", conversationId: null, userName: "我",
           pomoTimer: null, pomoTimeLeft: 25 * 60, isPomoRunning: false,
-          classMessages: [], documentChunks: []
+          classMessages: [], documentChunks: [], currentDocTitle: "", currentChunkIdx: -1
         };
+        
+        // 数据库操作辅助
+        const openDB = () => new Promise((resolve, reject) => {
+            const req = indexedDB.open("roche_study_plugin_db", 2);
+            req.onupgradeneeded = e => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains("lectures")) {
+                    db.createObjectStore("lectures", { keyPath: "id", autoIncrement: true });
+                }
+            };
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
 
-        // 退出整个App
         ui.btnCloseApp.onclick = () => roche.ui.closeApp();
-
-        // 动态加载库
-        const loadScript = async (src) => {
-          return new Promise((res, rej) => {
-            if (document.querySelector(`script[src="${src}"]`)) return res();
-            const s = document.createElement("script");
-            s.src = src; s.onload = res; s.onerror = rej;
-            document.head.appendChild(s);
-          });
+        
+        const checkAuth = () => {
+          if (!session.charId) { roche.ui.toast("请先在顶部选择羁绊对象"); return false; }
+          return true;
         };
 
-        // 高精度日志Prompt生成
+        ui.charSelect.addEventListener('change', async (e) => {
+          session.charId = e.target.value;
+          if (!session.charId) return;
+          session.charName = e.target.options[e.target.selectedIndex].text;
+          roche.ui.toast(`已绑定: ${session.charName}`);
+          const convs = await roche.conversation.list(session.charId);
+          if (convs && convs.length > 0) session.conversationId = convs[0].id;
+          else session.conversationId = null;
+        });
+
+        ui.home.querySelector("#btn-pomo").onclick = () => {
+          if(checkAuth()) {
+            ui.home.style.display = "none";
+            ui.pagePomo.classList.add("active");
+          }
+        };
+        ui.pagePomo.querySelector("#back-from-pomo").onclick = () => {
+          ui.pagePomo.classList.remove("active");
+          ui.home.style.display = "flex";
+        };
+
         const generateMemoryArchivalPrompt = (logText) => {
           return `### [System Instruction: Memory Archival]
 当前日期: ${new Date().toLocaleDateString()}
 任务: 请回顾刚才在自习室里的互动记录，生成一份【高精度的事件日志】。
-
 ### 核心撰写规则 (Strict Protocols)
 1.  **覆盖率 (Coverage)**: 必须包含聊过的**每一个**独立话题、看过的资料章节或完成的专注任务。
 2.  **视角 (Perspective)**: 你【就是】"${session.charName}"。这是【你】的私密日记。必须用"我"来称呼自己，用"${session.userName}"称呼对方。
 3.  **格式 (Format)**: **必须**使用 Markdown 无序列表 ( - ... )。
 4.  **去水 (Conciseness)**: 直接写发生了什么。示例: "- ${session.userName}上传了资料第二章，我抽查了重点。"
-
 ### 待处理记录
 ${logText}`;
         };
 
-        // --- 超级上下文组装系统 (读取人设+记忆+世界书) ---
         const buildContext = async () => {
-          let userBio = "无";
-          let charBio = "无";
-          let coreMem = "无";
-          let factsMem = "无";
-          let shortTerm = "无";
-          let worldbook = "无";
-
+          let userBio = "无"; let charBio = "无"; let coreMem = "无"; let factsMem = "无"; let shortTerm = "无"; let worldbook = "无";
           try {
             const activeUser = await roche.persona.getActiveUserPersona();
             userBio = activeUser?.persona || activeUser?.bio || "无";
             const char = await roche.character.get(session.charId);
             charBio = char.persona || char.bio || "无";
-            
             if(session.conversationId) {
-              // 读取长期记忆 (包含核心和事实)
               const lt = await roche.memory.getLongTerm({ conversationId: session.conversationId, limit: 50 });
               coreMem = lt.core?.summary || "无";
               factsMem = (lt.facts || []).map(f => f.summaryText || f.action || "").filter(Boolean).join('; ') || "无";
-              
-              // 读取短期聊天记录
               const st = await roche.memory.getShortTerm({ conversationId: session.conversationId, limit: 10 });
               shortTerm = st.map(m => `${m.senderName}: ${m.text}`).join('\n') || "无";
             }
-            
-            // 尝试读取世界书
             try {
               const wbEntries = await roche.worldbook.getEntries({});
               if (wbEntries && wbEntries.length > 0) {
                  worldbook = wbEntries.map(e => e.content || e.text).join('\n').substring(0, 1500);
               }
             } catch(e) {}
-          } catch (e) { console.error("Context build failed", e); }
-
+          } catch (e) {}
           return {
-            sysPrompt: `【场景】：专属同频自习室\n【角色设定】：你是 ${session.charName}。严格遵循你的原本人设。\n【用户设定】：${session.userName} (${userBio})\n【世界书设定】：${worldbook}\n【你们的核心记忆】：${coreMem}\n【你们的历史事实记忆】：${factsMem}\n【你们最近的聊天】：\n${shortTerm}\n\n【当前任务】：你在自习室辅导陪伴用户。\n【输出格式要求】：\n1. 绝对不要使用“赛博朋克”、“AI助手”等出戏的自我称呼。\n2. 你的动作和神态描写请使用 * * 包裹（例如 *微微皱眉*、*轻敲桌面*），绝对不要混杂在常规说话的文本里！`
+            sysPrompt: `【场景】：专属同频自习室\n【角色设定】：你是 ${session.charName}。严格遵循你的原本人设。\n【用户设定】：${session.userName} (${userBio})\n【世界书设定】：${worldbook}\n【你们的核心记忆】：${coreMem}\n【你们的历史事实记忆】：${factsMem}\n【你们最近的聊天】：\n${shortTerm}\n\n【当前任务】：你在自习室辅导陪伴用户。\n【输出格式要求】：\n1. 绝对不要使用“赛博朋克”、“AI助手”等出戏的自我称呼。\n2. 你的动作和神态描写必须使用 * * 包裹（例如 *微微皱眉*、*轻敲桌面*）。\n3. 你的对话部分，绝对不要带类似 “陈序：” 这样的前缀！直接输出你说的话和动作即可。\n4. 注意排版，对话要分段。`
           };
         };
 
-        // 初始化时钟与状态
         const updateClock = () => {
           const now = new Date();
           container.querySelector("#sr-clock").textContent = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
@@ -235,42 +269,26 @@ ${logText}`;
 
         try {
           const chars = await roche.character.list();
+          ui.charSelect.innerHTML = '<option value="">选择羁绊...</option>' + chars.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+          const activeCharId = await roche.character.getActiveId();
+          if (activeCharId) {
+            ui.charSelect.value = activeCharId;
+            ui.charSelect.dispatchEvent(new Event('change'));
+          }
           const activeUser = await roche.persona.getActiveUserPersona();
-          if(activeUser) session.userName = activeUser.handle || activeUser.name || "我";
-          ui.charSelect.innerHTML = '<option value="">选择羁绊...</option>' + chars.map(c => `<option value="${c.id}">${c.handle || c.name}</option>`).join('');
-          ui.charSelect.onchange = async () => {
-            session.charId = ui.charSelect.value;
-            if(session.charId) {
-              const c = await roche.character.get(session.charId);
-              session.charName = c.handle || c.name;
-              session.conversationId = c.conversationId;
-            }
-          };
+          if(activeUser && activeUser.name) session.userName = activeUser.name;
         } catch(e) {}
 
-        const checkAuth = () => {
-          if(!session.charId) { roche.ui.toast("请先选择羁绊对象"); return false; }
-          return true;
-        };
-
-        // --- 番茄钟 ---
-        container.querySelector("#btn-pomo").onclick = () => { if(checkAuth()){ ui.home.style.display="none"; ui.pagePomo.classList.add("active"); }};
-        container.querySelector("#back-from-pomo").onclick = () => { ui.pagePomo.classList.remove("active"); ui.home.style.display="flex"; };
-
-        const formatTime = (secs) => `${String(Math.floor(secs/60)).padStart(2,'0')}:${String(secs%60).padStart(2,'0')}`;
         const requestPomoQuote = async (intent) => {
-          ui.pomoMsg.textContent = "TA正在思考...";
           try {
-            const ctx = await buildContext();
-            const res = await roche.ai.chat({
-              messages: [
-                { role: "system", content: ctx.sysPrompt },
-                { role: "user", content: `我现在在自习室里，${intent}。请结合我们的人设和记忆，对我简短说一句话（包含动作描写，15字以内）。` }
-              ],
-              temperature: 0.8
-            });
-            ui.pomoMsg.textContent = `${session.charName}: "${res.text.trim()}"`;
-          } catch(e) { ui.pomoMsg.textContent = "（TA在一旁安静地看着你）"; }
+             ui.pomoMsg.textContent = "TA正在思考...";
+             const ctx = await buildContext();
+             const sys = `${ctx.sysPrompt}\n\n当前场景：同频番茄钟。用户意图：[${intent}]。请用简短的一两句话（可以带动作描写 * *）作出回应，符合你的性格。直接说出你的话，不要加名字前缀。`;
+             const res = await roche.ai.chat({ messages: [{role: "system", content: sys}], temperature: 0.8 });
+             ui.pomoMsg.textContent = res.text;
+          } catch(e) {
+             ui.pomoMsg.textContent = "(无声的陪伴)";
+          }
         };
 
         ui.pomoAction.onclick = async () => {
@@ -278,19 +296,22 @@ ${logText}`;
             clearInterval(session.pomoTimer);
             session.isPomoRunning = false;
             session.pomoTimeLeft = 25 * 60;
-            ui.pomoTimer.textContent = formatTime(session.pomoTimeLeft);
+            ui.pomoTimer.textContent = "25:00";
             ui.pomoAction.textContent = "开始专注";
             ui.pomoAction.style.background = "#E07A5F";
-            await requestPomoQuote("我刚刚中途放弃了专注任务");
+            ui.pomoMsg.textContent = "番茄钟已重置。";
           } else {
             session.isPomoRunning = true;
-            ui.pomoAction.textContent = "放弃专注";
-            ui.pomoAction.style.background = "#D9534F";
-            await requestPomoQuote("我刚刚按下了开始专注的按钮，准备开启25分钟的专注");
+            ui.pomoAction.textContent = "放弃专注 (放弃)";
+            ui.pomoAction.style.background = "#FF6B6B";
+            await requestPomoQuote("我准备开始25分钟的专注，跟我说句话");
+            
             session.pomoTimer = setInterval(async () => {
               session.pomoTimeLeft--;
-              ui.pomoTimer.textContent = formatTime(session.pomoTimeLeft);
-              if (session.pomoTimeLeft > 0 && session.pomoTimeLeft % (5 * 60) === 0) await requestPomoQuote(`倒计时还剩${Math.floor(session.pomoTimeLeft/60)}分钟，给我点反应`);
+              const m = Math.floor(session.pomoTimeLeft / 60);
+              const s = session.pomoTimeLeft % 60;
+              ui.pomoTimer.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+              
               if (session.pomoTimeLeft <= 0) {
                 clearInterval(session.pomoTimer);
                 session.isPomoRunning = false;
@@ -301,13 +322,7 @@ ${logText}`;
                 try {
                   const logPrompt = generateMemoryArchivalPrompt(`- 和 ${session.userName} 在同频自习室里一起完成了 25 分钟的番茄钟专注。`);
                   const sumRes = await roche.ai.chat({ messages: [{role:"system", content: logPrompt}], temperature: 0.4 });
-                  await roche.memory.write({
-                    conversationId: session.conversationId,
-                    summaryText: sumRes.text.trim(),
-                    who: [session.userName, session.charName],
-                    action: "完成了番茄钟专注",
-                    when: "刚刚", where: "专属讲堂", source: "plugin"
-                  });
+                  await roche.memory.write({ conversationId: session.conversationId, action: "完成了番茄钟专注", summaryText: sumRes.text.trim(), who: [session.userName, session.charName], when: "刚刚", where: "专属讲堂", source: "plugin" });
                   roche.ui.toast("记忆已同步更新");
                 } catch(e) {}
               }
@@ -315,113 +330,272 @@ ${logText}`;
           }
         };
 
-        // --- 讲堂逻辑 ---
-        container.querySelector("#btn-class").onclick = () => {
-          if(checkAuth()){ ui.home.style.display="none"; ui.pageClass.classList.add("active"); }
+        // --- 智能语义分章 ---
+        const smartChunkText = (text, maxSize = 2500) => {
+          let processedText = text.replace(/([。！？!?])/g, "$1\n");
+          const lines = processedText.split('\n');
+          const chunks = [];
+          let currentChunk = "";
+          let currentTitle = "引言/前言";
+          const headerRegex = /^(第[\d零一二三四五六七八九十百千万]+[章回节讲篇单元]|Chapter\s*\d+|#{1,4}\s+)/i;
+          
+          for (let line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed) continue;
+            if (headerRegex.test(trimmed)) {
+              if (currentChunk.length > 100) {
+                chunks.push({ title: currentTitle, content: currentChunk });
+                currentChunk = line + '\n';
+                currentTitle = trimmed.substring(0, 25);
+              } else {
+                currentTitle = trimmed.substring(0, 25);
+                currentChunk += line + '\n';
+              }
+            } else {
+              currentChunk += line + '\n';
+              if (currentChunk.length >= maxSize) {
+                chunks.push({ title: currentTitle, content: currentChunk });
+                currentChunk = "";
+                currentTitle = currentTitle.startsWith("继续:") ? currentTitle : "继续: " + currentTitle.substring(0, 15);
+              }
+            }
+          }
+          if (currentChunk.trim().length > 0) {
+            chunks.push({ title: currentTitle, content: currentChunk });
+          }
+          return chunks.length > 0 ? chunks : [{ title: "全部内容", content: text.substring(0, maxSize) }];
         };
-        
-        const appendBubble = (role, text) => {
+
+        const appendBubble = (type, text) => {
           const div = document.createElement("div");
-          div.className = `sr-bubble ${role}`;
-          div.textContent = text;
+          div.className = `sr-bubble ${type}`;
+          let htmlText = text.replace(/\n/g, '<br/>');
+          if (type === 'ai') {
+            htmlText = htmlText.replace(new RegExp(`^${session.charName}[：:]\\s*`, 'i'), '');
+            htmlText = htmlText.replace(new RegExp(`^<br/>${session.charName}[：:]\\s*`, 'i'), '');
+          }
+          div.innerHTML = htmlText;
           ui.classBox.appendChild(div);
           ui.classBox.scrollTop = ui.classBox.scrollHeight;
         };
 
-        const chunkText = (text, size = 1500) => {
-          const chunks = [];
-          const paragraphs = text.split('\n');
-          let cur = "";
-          for(let p of paragraphs) {
-            if(cur.length + p.length > size && cur.length > 0) {
-              chunks.push(cur);
-              cur = p + '\n';
-            } else {
-              cur += p + '\n';
-            }
-          }
-          if(cur.trim()) chunks.push(cur);
-          return chunks;
-        };
+        const loadScript = (src) => new Promise((resolve, reject) => {
+          if(document.querySelector(`script[src="${src}"]`)) return resolve();
+          const s = document.createElement('script');
+          s.src = src; s.onload = resolve; s.onerror = reject;
+          document.head.appendChild(s);
+        });
 
         const parseFile = async (file) => {
           const ext = file.name.split('.').pop().toLowerCase();
           if (['txt', 'md', 'json', 'csv'].includes(ext)) return await file.text();
           if (ext === 'docx') {
             await loadScript('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js');
-            return (await mammoth.extractRawText({arrayBuffer: await file.arrayBuffer()})).value;
+            const arrayBuffer = await file.arrayBuffer();
+            const result = await mammoth.extractRawText({ arrayBuffer });
+            return result.value;
           }
           if (ext === 'pdf') {
             await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js');
-            const pdfjsLib = window['pdfjs-dist/build/pdf'];
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-            const pdf = await pdfjsLib.getDocument({data: await file.arrayBuffer()}).promise;
-            let text = '';
-            for(let i=1; i<=Math.min(pdf.numPages, 30); i++) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            let text = "";
+            for (let i = 1; i <= pdf.numPages; i++) {
               const page = await pdf.getPage(i);
-              text += (await page.getTextContent()).items.map(item => item.str).join(' ') + '\n';
+              const content = await page.getTextContent();
+              text += content.items.map(item => item.str).join(' ') + "\n";
             }
             return text;
           }
-          throw new Error("格式不支持");
+          throw new Error("不支持的文件格式");
         };
 
-        ui.classFile.addEventListener('change', async (e) => {
+        // ====== 流程跳转逻辑 ======
+        
+        // 1. 历史记录加载
+        const loadHistory = async () => {
+            try {
+                const db = await openDB();
+                const tx = db.transaction("lectures", "readonly");
+                const store = tx.objectStore("lectures");
+                const req = store.getAll();
+                req.onsuccess = () => {
+                    const records = req.result.sort((a,b) => b.timestamp - a.timestamp);
+                    ui.historyList.innerHTML = records.length === 0 ? '<div style="color:#999; font-size:12px; text-align:center; padding:20px;">暂无记录</div>' : '';
+                    records.forEach(record => {
+                        const item = document.createElement("div");
+                        item.className = "chapter-list-item";
+                        item.innerHTML = `
+                          <div>
+                            <div class="chapter-title">${record.title}</div>
+                            <div class="chapter-info">共 ${record.chunks?.length || 0} 个章节</div>
+                          </div>
+                          <button style="background:#FF6B6B; color:#FFF; border:none; border-radius:4px; padding:6px 12px; cursor:pointer;">删除</button>
+                        `;
+                        // 点击记录恢复，进入【章节选择页】
+                        item.querySelector("div").onclick = () => {
+                            session.documentChunks = record.chunks || [];
+                            session.currentDocTitle = record.title;
+                            session.classMessages = record.messages || []; // 这个其实已经没用了，因为我们是按章节新建课堂
+                            renderChapterList();
+                            ui.pageClassEntry.classList.remove("active");
+                            ui.pageChapterList.classList.add("active");
+                        };
+                        item.querySelector("button").onclick = async (e) => {
+                            e.stopPropagation();
+                            if(confirm("确定删除这条记录吗？")) {
+                                const txDel = db.transaction("lectures", "readwrite");
+                                txDel.objectStore("lectures").delete(record.id);
+                                txDel.oncomplete = () => loadHistory();
+                            }
+                        };
+                        ui.historyList.appendChild(item);
+                    });
+                };
+            } catch(e) { console.error("DB Load Error", e); }
+        };
+
+        // 渲染章节列表 (层级 2)
+        const renderChapterList = () => {
+            ui.chapterListTitle.textContent = session.currentDocTitle || "课本目录";
+            ui.chapterListContainer.innerHTML = "";
+            session.documentChunks.forEach((chunk, idx) => {
+                const item = document.createElement("div");
+                item.className = "chapter-list-item";
+                item.innerHTML = `
+                  <div>
+                    <div class="chapter-title">${chunk.title}</div>
+                    <div class="chapter-info">约 ${chunk.content.length} 字</div>
+                  </div>
+                  <div style="color:#6D8B74; font-size:20px;">→</div>
+                `;
+                item.onclick = () => enterClassRoom(idx);
+                ui.chapterListContainer.appendChild(item);
+            });
+        };
+
+        // 进入课堂 (层级 3)
+        const enterClassRoom = async (chunkIdx) => {
+            session.currentChunkIdx = chunkIdx;
+            const chunkData = session.documentChunks[chunkIdx];
+            if(!chunkData) return;
+            
+            ui.pageChapterList.classList.remove("active");
+            ui.pageClass.classList.add("active");
+            ui.currentClassTitle.textContent = chunkData.title;
+            
+            ui.classBox.innerHTML = "";
+            session.classMessages = [];
+            
+            appendBubble("system", `正在准备【${chunkData.title}】的课堂...`);
+            
+            try {
+              const ctx = await buildContext();
+              const sysPrompt = `${ctx.sysPrompt}\n\n【本节课的学习资料 (${chunkData.title})】：\n${chunkData.content}\n\n【任务指令】：\n主动和用户打招呼，用你的口吻概括这段资料的核心内容，并引导用户开始复习或提问。`;
+              
+              session.classMessages.push({ role: "system", content: sysPrompt });
+              session.classMessages.push({ role: "user", content: `我准备好上这节课了：《${chunkData.title}》` });
+              
+              ui.classInput.disabled = true; ui.classSend.disabled = true;
+              const result = await roche.ai.chat({ messages: session.classMessages, temperature: 0.7 });
+              session.classMessages.push({ role: "assistant", content: result.text });
+              ui.classBox.innerHTML = ""; // 清除系统提示
+              appendBubble("ai", result.text);
+            } catch(e) {
+              appendBubble("system", "讲师准备失败: " + e.message);
+            } finally {
+              ui.classInput.disabled = false; ui.classSend.disabled = false; ui.classInput.focus();
+            }
+        };
+
+        // 绑定事件：大厅 -> 资料室
+        ui.btnClassEntry.onclick = () => {
+            if(checkAuth()) {
+                ui.home.style.display = "none";
+                ui.pageClassEntry.classList.add("active");
+                loadHistory();
+            }
+        };
+        
+        // 绑定事件：资料室 -> 大厅
+        ui.backFromClassEntry.onclick = () => {
+            ui.pageClassEntry.classList.remove("active");
+            ui.home.style.display = "flex";
+        };
+        
+        // 绑定事件：资料室上传文件 -> 解析 -> 章节列表
+        ui.fileEntry.addEventListener('change', async (e) => {
           const file = e.target.files[0];
           if(!file) return;
-          appendBubble("system", `正在解析 [${file.name}]...`);
+          
+          ui.fileEntry.disabled = true;
+          roche.ui.toast(`正在全力解析 [${file.name}]...`);
           try {
             let text = await parseFile(file);
-            session.documentChunks = chunkText(text, 1500);
-            appendBubble("system", `解析完成！共切分为 ${session.documentChunks.length} 个小节。请选择要讲解的章节。`);
+            session.documentChunks = smartChunkText(text, 2500);
+            session.currentDocTitle = file.name.replace(/\.[^/.]+$/, "");
             
-            ui.chapterSelect.innerHTML = session.documentChunks.map((_, i) => `<option value="${i}">第 ${i+1} 部分 (约 ${session.documentChunks[i].length} 字)</option>`).join('');
-            ui.chapterArea.style.display = "flex";
+            // 保存到历史记录
+            try {
+               const db = await openDB();
+               const tx = db.transaction("lectures", "readwrite");
+               tx.objectStore("lectures").add({
+                   timestamp: Date.now(),
+                   title: session.currentDocTitle,
+                   chunks: [...session.documentChunks],
+                   messages: []
+               });
+            } catch(dbErr) { console.error("DB Save Error", dbErr); }
+            
+            ui.pageClassEntry.classList.remove("active");
+            ui.pageChapterList.classList.add("active");
+            renderChapterList();
           } catch(err) {
-            appendBubble("system", "解析失败: " + err.message);
+            roche.ui.toast("解析失败: " + err.message);
           } finally {
-            ui.classFile.value = "";
+            ui.fileEntry.value = "";
+            ui.fileEntry.disabled = false;
           }
         });
-
-        ui.chapterBtn.onclick = async () => {
-          const idx = parseInt(ui.chapterSelect.value);
-          const chunkText = session.documentChunks[idx];
-          if(!chunkText) return;
-          
-          ui.chapterArea.style.display = "none";
-          appendBubble("system", `已选择第 ${idx+1} 部分。正在建立记忆互通链接...`);
-          
-          try {
-            const ctx = await buildContext();
-            const sysPrompt = `${ctx.sysPrompt}\n\n【用户选择的学习资料 (第${idx+1}部分)】：\n${chunkText}\n\n【任务指令】：\n主动和用户打招呼，概括这段资料的核心内容，并进入辅导状态。`;
-            
-            session.classMessages = [{ role: "system", content: sysPrompt }];
-            ui.classInput.disabled = true; ui.classSend.disabled = true;
-            
-            const result = await roche.ai.chat({
-              messages: session.classMessages,
-              temperature: 0.7
-            });
-            session.classMessages.push({ role: "assistant", content: result.text });
-            appendBubble("ai", result.text);
-          } catch(err) {
-            appendBubble("system", "生成失败: " + err.message);
-          } finally {
-            ui.classInput.disabled = false; ui.classSend.disabled = false; ui.classInput.focus();
+        
+        // 绑定事件：章节列表 -> 资料室
+        ui.backFromChapterList.onclick = () => {
+            ui.pageChapterList.classList.remove("active");
+            ui.pageClassEntry.classList.add("active");
+            loadHistory();
+        };
+        
+        // 绑定事件：课堂 -> 章节列表 (退出课堂，刻入记忆)
+        ui.backFromClass.onclick = async () => {
+          ui.pageClass.classList.remove("active");
+          ui.pageChapterList.classList.add("active");
+          if (session.classMessages.length > 2) { // 大于2是因为包含了system和初始的打招呼
+            roche.ui.toast("正在将这节课的讨论刻入主数据库...");
+            const logText = session.classMessages.filter(m => m.role !== 'system').map(m => `${m.role === 'assistant' ? session.charName : session.userName}: ${m.content}`).join('\n');
+            try {
+              const res = await roche.ai.chat({ messages: [{ role: "system", content: generateMemoryArchivalPrompt(logText) }], temperature: 0.3 });
+              await roche.memory.write({
+                conversationId: session.conversationId,
+                action: res.text.trim(),
+                summaryText: res.text.trim(),
+                who: [session.userName, session.charName],
+                when: "刚刚",
+                where: "专属讲堂",
+                source: "plugin"
+              });
+              roche.ui.toast("记忆刻入完成！");
+            } catch(e) { roche.ui.toast("记忆写入失败: " + e.message); }
           }
         };
 
+        // ====== 聊天逻辑 ======
         ui.classSend.onclick = async () => {
           const text = ui.classInput.value.trim();
           if(!text) return;
           ui.classInput.value = "";
           appendBubble("user", text);
           
-          if(session.classMessages.length === 0) {
-            const ctx = await buildContext();
-            session.classMessages.push({ role: "system", content: ctx.sysPrompt });
-          }
           session.classMessages.push({ role: "user", content: text });
           ui.classInput.disabled = true; ui.classSend.disabled = true;
           try {
@@ -434,39 +608,21 @@ ${logText}`;
             ui.classInput.disabled = false; ui.classSend.disabled = false; ui.classInput.focus();
           }
         };
+        
+        ui.classInput.addEventListener("keypress", (e) => {
+            if(e.key === "Enter" && !ui.classSend.disabled) ui.classSend.click();
+        });
 
         ui.classExport.onclick = () => {
           if(session.classMessages.length <= 1) return;
-          let out = `【${session.charName} 的讲堂笔记】\n\n`;
+          let out = `【${session.charName} 的讲堂笔记: ${session.currentClassTitle}】\n\n`;
           session.classMessages.forEach(m => {
             if(m.role === 'user') out += `${session.userName}: ${m.content}\n\n`;
             else if(m.role === 'assistant') out += `${session.charName}: ${m.content}\n\n`;
           });
           const a = document.createElement("a");
           a.href = URL.createObjectURL(new Blob([out], { type: "text/plain" }));
-          a.download = "笔记.txt"; a.click();
-        };
-
-        container.querySelector("#back-from-class").onclick = async () => {
-          ui.pageClass.classList.remove("active");
-          ui.home.style.display = "flex";
-          if (session.classMessages.length > 1) {
-            roche.ui.toast("正在整理记忆并刻入主数据库...");
-            const logText = session.classMessages.map(m => `${m.role === 'assistant' ? session.charName : session.userName}: ${m.content}`).join('\n');
-            try {
-              const res = await roche.ai.chat({ messages: [{ role: "system", content: generateMemoryArchivalPrompt(logText) }], temperature: 0.3 });
-              await roche.memory.write({
-                conversationId: session.conversationId,
-                summaryText: res.text.trim(),
-                who: [session.userName, session.charName],
-                action: "在专属讲堂学习了资料",
-                when: "刚刚", where: "专属讲堂", source: "plugin"
-              });
-              roche.ui.toast("全记忆互通完成，已无缝衔接主线！");
-              session.classMessages = []; ui.classBox.innerHTML = "";
-              ui.chapterArea.style.display = "none";
-            } catch(e) { roche.ui.toast("记忆写入失败"); }
-          }
+          a.download = `笔记_${session.currentClassTitle}.txt`; a.click();
         };
       },
       async unmount(container) {

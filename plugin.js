@@ -14,7 +14,7 @@ window.RochePlugin.register({
           const style = document.createElement("style");
           style.id = styleId;
           style.textContent = `
-            .sr-wrap { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background-color: #FDFBF7; color: #4A4A4A; height: 100%; width: 100%; display: flex; flex-direction: column; padding: 16px; box-sizing: border-box; position: relative; overflow: hidden; }
+            .sr-wrap { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background-color: #FDFBF7; color: #4A4A4A; height: 100%; width: 100%; display: flex; flex-direction: column; padding: 16px; padding-top: max(16px, env(safe-area-inset-top)); box-sizing: border-box; position: relative; overflow: hidden; }
             .sr-wrap * { box-sizing: border-box; }
             .sr-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-shrink: 0; }
             .sr-title { margin: 0; font-size: 20px; font-weight: bold; color: #6D8B74; display: flex; align-items: center; gap: 8px; }
@@ -476,7 +476,7 @@ ${logText}`;
                                                                         item.innerHTML = `
                           <div>
                             <div class="chapter-title">${record.title}</div>
-                            <div class="chapter-info">共 ${record.chunks?.length || 0} 个章节 | ${new Date(record.timestamp).toLocaleString()}</div>
+                            <div class="chapter-info">共 ${record.chunks?.length || 0} 个章节 | ${record.timestamp ? new Date(record.timestamp).toLocaleString() : '未知时间'}</div>
                           </div>
                           <div style="display:flex; flex-direction: column; gap:4px; align-items: flex-end;">
                             <div style="display:flex; gap:8px;">

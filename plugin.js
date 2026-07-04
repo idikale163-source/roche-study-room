@@ -508,7 +508,27 @@ ${logText}`;
                         if (btnMem) {
                             btnMem.onclick = async (e) => {
                                 e.stopPropagation();
-                                                                                                if (confirm("确定将这门课的讨论提取并写入 Roche 主记忆吗？(写入后不可在插件内撤销)")) {
+                                
+                                // 拦截空课程和非法数据
+                                let validAiMsgsCount = 0;
+                                if (record.chapterMessages && Array.isArray(record.chapterMessages)) {
+                                    for (const ch of record.chapterMessages) {
+                                        if (ch && Array.isArray(ch)) {
+                                            for (const msg of ch) {
+                                                if (msg.role === 'assistant') {
+                                                    validAiMsgsCount++;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                if (validAiMsgsCount === 0) {
+                                    roche.ui.toast("这门课里导师还没有讲过话，没有可提取的内容哦~");
+                                    return;
+                                }
+
+                                if (confirm("确定将这门课的讨论提取并写入 Roche 主记忆吗？(写入后不可在插件内撤销)")) {
                                     roche.ui.toast("正在提取记忆...");
                                     let allLogs = "";
                                     if (record.chapterMessages) {

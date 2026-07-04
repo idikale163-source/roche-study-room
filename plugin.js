@@ -14,9 +14,9 @@ window.RochePlugin.register({
           const style = document.createElement("style");
           style.id = styleId;
           style.textContent = `
-            .sr-wrap { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background-color: #FDFBF7; color: #4A4A4A; height: 100%; width: 100%; display: flex; flex-direction: column; padding: 16px; padding-top: max(16px, env(safe-area-inset-top, 40px)); box-sizing: border-box; position: relative; overflow: hidden; }
+            .sr-wrap { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background-color: #FDFBF7; color: #4A4A4A; height: 100%; width: 100%; display: flex; flex-direction: column; padding: 16px; padding-top: max(45px, env(safe-area-inset-top)); box-sizing: border-box; position: relative; overflow: hidden; }
             .sr-wrap * { box-sizing: border-box; }
-            .sr-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-shrink: 0; padding-top: env(safe-area-inset-top, 30px); }
+            .sr-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-shrink: 0; }
             .sr-title { margin: 0; font-size: 20px; font-weight: bold; color: #6D8B74; display: flex; align-items: center; gap: 8px; }
             .sr-select { padding: 6px 12px; border-radius: 12px; border: 1px solid #D5E2D8; background: #FFF; outline: none; font-size: 14px; color: #4A4A4A; cursor: pointer; }
             .sr-close-btn { background: #FF6B6B; color: white; border: none; padding: 6px 12px; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 14px; }

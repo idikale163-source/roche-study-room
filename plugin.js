@@ -114,7 +114,7 @@ window.RochePlugin.register({
             <button class="sr-back-btn" id="back-from-class-entry">← 退回大厅</button>
             <h2 style="color:#6D8B74; margin-bottom: 8px;">讲堂资料室</h2>
             <div style="background:#FFF; padding: 16px; border-radius:12px; border:1px solid #EAEFEA; margin-bottom: 16px;">
-                <div style="font-size:14px; color:#555; margin-bottom:12px;">导入学习资料（PDF/Docx/TXT），AI 将通读并分发章节。</div>
+                <div style="font-size:14px; color:#555; margin-bottom:12px;">在这里你可以将任何学习资料（TXT/PDF/DOCX）上传，你的虚拟导师将会帮你将其提炼为多个易于消化的独立知识章节。在每个章节的独立自习室里，导师会专业但通俗易懂地为你讲解每个知识点。</div>
                 <div class="sr-file-btn" style="width:100%;">
                   📎 导入新资料并解析
                   <input type="file" id="class-file-entry" accept=".txt,.md,.pdf,.docx,.json" />
@@ -137,7 +137,7 @@ window.RochePlugin.register({
             <button class="sr-back-btn" id="back-from-class">← 返回目录</button>
             <h3 style="margin:0 0 12px 0; color:#6D8B74; text-align:center; font-size:16px;" id="current-class-title">当前课堂</h3>
             <div class="sr-toolbar">
-              <button class="sr-action-btn" id="class-export">📥 导出本节课笔记</button>
+              <button class="sr-action-btn" id="class-export">📝 一键总结考点</button>
 
               <button class="sr-action-btn" id="view-doc-btn" style="margin-left: 8px;">📄 查看当前资料</button>
 
@@ -564,7 +564,7 @@ ${logText}`;
             if(ui.viewDocBtn) {
                 ui.viewDocBtn.onclick = () => {
                     if(session.documentChunks && session.documentChunks[chunkIdx]) {
-                        ui.docModalContent.textContent = session.documentChunks[chunkIdx].content;
+                        ui.docModalContent.textContent = session.documentChunks[chunkIdx].content; ui.docModal.querySelector('h4').textContent = '📄 资料原文';
                         ui.docModal.style.display = "flex";
                     } else {
                         roche.ui.toast("当前章节没有资料原文");
@@ -722,17 +722,35 @@ ${logText}`;
             if(e.key === "Enter" && !ui.classSend.disabled) ui.classSend.click();
         });
 
-        ui.classExport.onclick = () => {
-          if(session.classMessages.length <= 1) return;
-          let out = `【${session.charName} 的讲堂笔记: ${session.currentClassTitle}】\n\n`;
-          session.classMessages.forEach(m => {
-            if(m.role === 'user') out += `${session.userName}: ${m.content}\n\n`;
-            else if(m.role === 'assistant') out += `${session.charName}: ${m.content}\n\n`;
-          });
-          const a = document.createElement("a");
-          a.href = URL.createObjectURL(new Blob([out], { type: "text/plain" }));
-          a.download = `笔记_${session.currentClassTitle}.txt`; a.click();
+                ui.classExport.onclick = async () => {
+          if(!session.documentChunks || session.documentChunks.length === 0) return;
+          
+          ui.docModalContent.textContent = "正在为您提炼本节课的考点笔记，请稍候...";
+          ui.docModal.querySelector("h4").textContent = "📝 考点笔记";
+          ui.docModal.style.display = "flex";
+          
+          const currentDoc = session.documentChunks[session.currentChunkIdx]?.content || "";
+          const chatHistory = session.classMessages.filter(m => m.role !== 'system').map(m => `${m.role}: ${m.content}`).join('\n');
+          
+          const prompt = `请根据以下学习资料以及我们刚才的讨论，为我提炼一份完整、清晰、结构化的考点笔记。要求：
+1. 必须使用 Markdown 格式。
+2. 重点突出，分点明确。
+3. 语言专业但通俗易懂。
+
+【学习资料】：
+${currentDoc}
+
+【我们的讨论】：
+${chatHistory}`;
+          
+          try {
+              const res = await roche.ai.chat({ messages: [{role: "user", content: prompt}], temperature: 0.3 });
+              ui.docModalContent.textContent = res.text;
+          } catch(e) {
+              ui.docModalContent.textContent = "生成笔记失败: " + e.message;
+          }
         };
+
 
           
 

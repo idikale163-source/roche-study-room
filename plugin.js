@@ -794,7 +794,8 @@ ${logText}`;
           
           // 同步当前房间聊天到章节记忆中
           if (session.currentChunkIdx !== undefined && session.chapterMessages) {
-              session.chapterMessages[session.currentChunkIdx] = session.classMessages;
+              // Must clone the array, otherwise it might be corrupted by object assignment later
+              session.chapterMessages[session.currentChunkIdx] = JSON.parse(JSON.stringify(session.classMessages));
           }
           
           try {
@@ -803,13 +804,18 @@ ${logText}`;
                 const tx = db.transaction("lectures", "readwrite");
                 const store = tx.objectStore("lectures");
                 const req = store.get(session.id);
-                req.onsuccess = async () => {
+                req.onsuccess = () => {
                     const record = req.result;
                     if (record) {
-                        record.chapterMessages = session.chapterMessages;
-                        await store.put(record);
+                        // Ensure deep copy to avoid IndexedDB clone errors
+                        record.chapterMessages = JSON.parse(JSON.stringify(session.chapterMessages));
+                        const putReq = store.put(record);
+                        putReq.onsuccess = () => console.log("Saved successfully to DB");
+                        putReq.onerror = (e) => console.error("Put failed", e);
                     }
                 };
+            } else {
+                console.warn("No session.id found, cannot save");
             }
           } catch (e) { console.error("自动保存到本地失败", e); }
         };
